@@ -1,0 +1,16 @@
+# Dependências e compilação local
+node_modules/
+.next/
+.npm-cache/
+
+# Credenciais e configurações locais
+.env.local
+.env*.local
+
+# Arquivos de diagnóstico
+*.log
+
+# Sistema operacional e editor
+.DS_Store
+Thumbs.db
+.vscode/

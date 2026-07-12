@@ -1,0 +1,1 @@
+import { ModulePage } from "@/components/module-page"; import { seed } from "@/lib/types"; export default function Page(){return <ModulePage title="Produtos" singular="produto" initial={seed.produtos}/>}
