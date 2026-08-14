@@ -1,1 +1,0 @@
-import { ModulePage } from "@/components/module-page"; import { seed } from "@/lib/types"; export default function Page(){return <ModulePage title="Pedidos e ordens de produção" singular="pedido" initial={seed.pedidos}/>}
