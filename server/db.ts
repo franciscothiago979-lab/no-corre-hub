@@ -1,78 +1,36 @@
-import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
-import { ENV } from "./_core/env";
+import type { InsertUser, User } from "../drizzle/schema";
 import { supabaseRest } from "./supabase";
 import { describeShopOrderItems, isDuplicateShopOrder, toCurrencyValue, type ShopOrderPayload } from "../shared/shopOrderSync";
 import type { AssetCatalogInput } from "../shared/assetCatalog";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+/** Mantido apenas como compatibilidade de API: o ERP agora persiste tudo no Supabase. */
+export async function getDb() { return null; }
 
-export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
-  }
-  return _db;
-}
+function userFilter(openId: string) { return `users?openId=eq.${encodeURIComponent(openId)}`; }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
-  const db = await getDb();
-  if (!db) return;
-  const values: InsertUser = { openId: user.openId };
-  const updateSet: Record<string, unknown> = {};
-  const textFields = ["name", "email", "loginMethod"] as const;
-  for (const field of textFields) {
-    if (user[field] !== undefined) {
-      values[field] = user[field] ?? null;
-      updateSet[field] = user[field] ?? null;
-    }
+  const values = { ...user, lastSignedIn: user.lastSignedIn ?? new Date() };
+  const updateSet: Record<string, unknown> = { ...values };
+  const existing = await supabaseRest<User[]>(`${userFilter(user.openId)}&select=openId`);
+  if (existing.length) {
+    await supabaseRest(`${userFilter(user.openId)}`, { method: "PATCH", body: updateSet, prefer: "return=minimal" });
+  } else {
+    await supabaseRest("users", { method: "POST", body: [values], prefer: "return=minimal" });
   }
-  if (user.lastSignedIn !== undefined) {
-    values.lastSignedIn = user.lastSignedIn;
-    updateSet.lastSignedIn = user.lastSignedIn;
-  }
-  if (user.role !== undefined) {
-    values.role = user.role;
-    updateSet.role = user.role;
-  } else if (user.openId === ENV.ownerOpenId) {
-    values.role = "admin";
-    updateSet.role = "admin";
-  }
-  values.lastSignedIn ??= new Date();
-  if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
-  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
 }
 
 export async function getUserByOpenId(openId: string) {
-  const db = await getDb();
-  if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-  return result[0];
+  const records = await supabaseRest<User[]>(`${userFilter(openId)}&select=*`);
+  return records[0];
 }
 
 export async function listAccessUsers() {
-  const db = await getDb();
-  if (!db) return [];
-  const records = await db.select({
-    openId: users.openId,
-    name: users.name,
-    email: users.email,
-    role: users.role,
-    lastSignedIn: users.lastSignedIn,
-  }).from(users);
-  return records;
+  return supabaseRest<Array<Pick<User, "openId" | "name" | "email" | "role" | "lastSignedIn">>>("users?select=openId,name,email,role,lastSignedIn&order=lastSignedIn.desc");
 }
 
 export async function setUserAccessRole(openId: string, role: "admin" | "user") {
-  const db = await getDb();
-  if (!db) throw new Error("Banco de usuários indisponível.");
-  await db.update(users).set({ role }).where(eq(users.openId, openId));
+  await supabaseRest(userFilter(openId), { method: "PATCH", body: { role }, prefer: "return=minimal" });
   return getUserByOpenId(openId);
 }
 

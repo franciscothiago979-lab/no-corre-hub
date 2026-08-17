@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: no-corre-central
+    runtime: node
+    plan: free
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    startCommand: pnpm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: media
+      - key: OWNER_OPEN_ID
+        sync: false
+      - key: OWNER_EMAIL
+        sync: false
+      - key: SHOP_ERP_SYNC_SECRET
+        sync: false
+      - key: EXTERNAL_CRON_SECRET
+        sync: false
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

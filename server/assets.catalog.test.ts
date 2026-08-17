@@ -33,9 +33,8 @@ describe("assets catalog", () => {
     fetchMock.mockImplementation((url: string | URL, init?: RequestInit) => {
       const href = String(url);
       if (href.includes("erp_records?") && (!init?.method || init.method === "GET")) return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
-      if (href.includes("storage/presign/put")) return Promise.resolve(new Response(JSON.stringify({ url: "https://storage.test/put" }), { status: 200 }));
-      if (href === "https://storage.test/put") return Promise.resolve(new Response("", { status: 200 }));
-      if (href.includes("storage/presign/get")) return Promise.resolve(new Response(JSON.stringify({ url: "https://storage.test/get" }), { status: 200 }));
+      if (href.includes("/storage/v1/object/") && init?.method === "POST" && !href.includes("/sign/")) return Promise.resolve(new Response(JSON.stringify({ Key: "media/arte.png" }), { status: 200 }));
+      if (href.includes("/storage/v1/object/sign/")) return Promise.resolve(new Response(JSON.stringify({ signedURL: "https://storage.test/get" }), { status: 200 }));
       if (href.endsWith("/rest/v1/erp_records") && init?.method === "POST") return Promise.resolve(new Response(JSON.stringify([{ record_id: 1, data: {} }]), { status: 201 }));
       return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
     });

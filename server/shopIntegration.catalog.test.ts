@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { registerShopIntegrationRoutes } from "./shopIntegration";
 
 describe("contrato de catálogo e acompanhamento da loja", () => {
+  process.env.SHOP_ERP_SYNC_SECRET = process.env.SHOP_ERP_SYNC_SECRET || "test-shop-sync-secret";
   const app = express();
   registerShopIntegrationRoutes(app, {
     importShopOrder: async () => { throw new Error("Não utilizado neste teste"); },

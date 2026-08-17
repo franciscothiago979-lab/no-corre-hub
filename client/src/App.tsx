@@ -76,7 +76,7 @@ type ProductionItem = { id: number; order: string; customer: string; detail: str
 type ShirtProductionSimulation = { id: number; name: string; quantity: number; fabricCost: number; seamstressCost: number; cutterCost: number; otherCost: number; resellerUnitCost: number; desiredMarginPercent: number; createdAt: string };
 type CatalogAsset = { id: number; originalName: string; name: string; model: string; theme: string; suggestedName: string; suggestedModel: string; suggestedTheme: string; confidence: number; notes: string; needsNameReview: boolean; status: "pending_review" | "approved" | "manual"; mimeType: "image/png" | "image/jpeg" | "image/webp"; sizeBytes: number; checksum: string; storageKey: string; url: string; createdAt: string; updatedAt: string };
 
-const BRAND_LOGO_URL = "/manus-storage/logo-horizontal_e4ef660b.png";
+const BRAND_LOGO_URL = import.meta.env.VITE_BRAND_LOGO_URL || "https://placehold.co/320x80/111111/FFFFFF?text=NO+CORRE+CENTRAL";
 
 const navGroups: { title: string; items: NavItem[] }[] = [
   { title: "Geral", items: [{ label: "Dashboard", path: "/dashboard", icon: LayoutDashboard }] },

@@ -10,11 +10,14 @@ function json(body: unknown, status = 200) {
 describe("persistência do pedido recebido da No Corre Shop", () => {
   beforeEach(() => {
     fetchMock.mockReset();
+    vi.stubEnv("SUPABASE_URL", "https://test.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
     vi.stubGlobal("fetch", fetchMock);
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
   it("cria contato e pedido no módulo orders que alimenta a tela Pedidos", async () => {

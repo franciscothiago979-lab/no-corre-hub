@@ -14,7 +14,7 @@ type ShopIntegrationDependencies = {
 
 function hasValidShopSecret(request: Request) {
   const supplied = request.header("x-shop-sync-secret") ?? "";
-  const configured = ENV.shopSyncSecret;
+  const configured = process.env.SHOP_ERP_SYNC_SECRET || process.env.ERP_SYNC_SECRET || ENV.shopSyncSecret;
   if (!configured || supplied.length !== configured.length) return false;
   return timingSafeEqual(Buffer.from(supplied), Buffer.from(configured));
 }
