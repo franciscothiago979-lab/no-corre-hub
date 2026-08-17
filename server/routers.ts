@@ -3,7 +3,6 @@ import { TRPCError } from "@trpc/server";
 import { createHash } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { invokeLLM } from "./_core/llm";
-import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { ENV } from "./_core/env";
 import { createAsset, createCustomer, createOrder, createProduct, createStockItem, createTransaction, deleteAsset, deleteCustomer, deleteOrder, deleteProduct, deleteStockItem, deleteTransaction, getWorkspaceSnapshot, listAccessUsers, listAssets, listCustomers, listOrders, listProducts, listStockItems, listTransactions, saveWorkspaceSnapshot, setUserAccessRole, updateAsset, updateCustomer, updateOrder, updateOrderStatus, updateProduct, updateStockItem, updateTransaction } from "./db";
@@ -104,7 +103,6 @@ async function publishOrderStatusToShop(ownerOpenId: string, order: Awaited<Retu
 }
 
 export const appRouter = router({
-  system: systemRouter,
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user ? { ...opts.ctx.user, isOwner: opts.ctx.user.openId === ENV.ownerOpenId } : null),
     logout: publicProcedure.mutation(() => ({ success: true } as const)),

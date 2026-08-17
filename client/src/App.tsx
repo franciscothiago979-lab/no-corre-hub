@@ -11,6 +11,7 @@ import { filterFinancialRecords, getFinancialFilterSummary, searchFinancialRecor
 import { OperationalExportPanel } from "@/components/OperationalExportPanel";
 import { AccessGate } from "@/components/AccessGate";
 import { startLogin } from "@/const";
+import Login from "@/pages/Login";
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandShortcut } from "@/components/ui/command";
 import {
   AlertTriangle,
@@ -590,6 +591,7 @@ type AppProps = { renderContent?: (page: string) => ReactNode };
 export function App({ renderContent }: AppProps) {
   const [location, navigate] = useLocation();
   const { user, loading, isAuthenticated, logout } = useAuth();
+  if (location === "/entrar") return <Login />;
   const path = location === "/" ? "/dashboard" : location;
   const page = path.replace(/^\//, "");
   const defaultContent = page === "dashboard" ? <Dashboard /> : page === "clientes" ? <Customers /> : page === "produtos" ? <ProductsPersistent /> : page === "pedidos" ? <OrdersPersistent /> : page === "fornecedores" ? <Suppliers /> : page === "precificacao" ? <Pricing /> : page === "orcamentos" ? <Quotes /> : page === "producao" ? <ProductionPersistent /> : page === "camisas" ? <ShirtProduction /> : page === "dtf" ? <Dtf /> : page === "sublimacao" ? <SublimationPersistent /> : page === "estoque" ? <InventoryPersistent /> : page === "financeiro" ? <FinancePersistent /> : page === "relatorios" ? <ReportsPersistent /> : page === "ia" ? <AiStudio /> : page === "biblioteca" ? <Library /> : page === "marketing" ? <MarketingWorkspace /> : page === "configuracoes" ? <SettingsPage /> : <Dashboard />;
