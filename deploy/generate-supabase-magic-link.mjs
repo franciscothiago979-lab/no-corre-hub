@@ -1,4 +1,4 @@
-export async function generateSupabaseMagicLink({ email = process.env.OWNER_EMAIL, redirectTo = "https://no-corre-erp-production.up.railway.app/dashboard", env = process.env, fetchImpl = fetch } = {}) {
+export async function generateSupabaseMagicLink({ email = process.env.OWNER_EMAIL, redirectTo = process.env.MAGIC_REDIRECT_URL || "https://no-corre-erp-production.up.railway.app/dashboard", env = process.env, fetchImpl = fetch } = {}) {
   const supabaseUrl = (env.SUPABASE_URL || "").replace(/\/$/, "");
   const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY || "";
   if (!supabaseUrl || !serviceKey || !email) throw new Error("SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY e e-mail são obrigatórios.");

@@ -32,6 +32,12 @@ function hasValidShopSecret(request: Request) {
   return timingSafeEqual(Buffer.from(supplied), Buffer.from(configured));
 }
 
+export function resolveShopOwnerOpenId(value = ENV.ownerOpenId) {
+  const ownerOpenId = String(value || "").trim();
+  if (!ownerOpenId) return "";
+  return ownerOpenId.startsWith("supabase:") ? ownerOpenId : `supabase:${ownerOpenId}`;
+}
+
 export function normalizeShopProductInput(value: unknown): ShopProductInput | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
@@ -62,7 +68,7 @@ export function registerShopIntegrationRoutes(app: Express, dependencies: ShopIn
       return response.status(401).json({ ok: false, error: "Não autorizado." });
     }
     try {
-      const products = await dependencies.listProducts(ENV.ownerOpenId);
+      const products = await dependencies.listProducts(resolveShopOwnerOpenId());
       response.set("Cache-Control", "no-store");
       return response.json({
         ok: true,
@@ -80,7 +86,7 @@ export function registerShopIntegrationRoutes(app: Express, dependencies: ShopIn
     const input = normalizeShopProductInput(request.body);
     if (!input) return response.status(400).json({ ok: false, error: "Dados de produto inválidos." });
     try {
-      const ownerOpenId = ENV.ownerOpenId;
+      const ownerOpenId = resolveShopOwnerOpenId();
       if (!ownerOpenId) return response.status(500).json({ ok: false, error: "Proprietário ERP não configurado." });
       const data = { name: input.name, category: input.category, sku: input.sku, variations: input.variations, price: input.priceCents / 100, stock: input.stock, minimumStock: input.minimumStock };
       const existing = (await dependencies.listProducts(ownerOpenId)).find((product) => product.sku === input.sku);
@@ -103,7 +109,7 @@ export function registerShopIntegrationRoutes(app: Express, dependencies: ShopIn
       return response.status(400).json({ ok: false, error: "Identificador de pedido inválido." });
     }
     try {
-      const order = (await dependencies.listOrders(ENV.ownerOpenId))
+      const order = (await dependencies.listOrders(resolveShopOwnerOpenId()))
         .find((record) => record.source === "no-corre-shop" && record.externalId === externalId);
       if (!order) {
         return response.status(404).json({ ok: false, error: "Pedido não encontrado." });
@@ -134,7 +140,7 @@ export function registerShopIntegrationRoutes(app: Express, dependencies: ShopIn
       return response.status(400).json({ ok: false, error: "Dados de pedido inválidos." });
     }
     try {
-      const result = await dependencies.importShopOrder(ENV.ownerOpenId, payload);
+      const result = await dependencies.importShopOrder(resolveShopOwnerOpenId(), payload);
       return response.status(result.duplicate ? 200 : 201).json({
         ok: true,
         duplicate: result.duplicate,

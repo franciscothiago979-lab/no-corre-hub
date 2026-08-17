@@ -1,8 +1,13 @@
 import express from "express";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { registerShopIntegrationRoutes } from "./shopIntegration";
+import { registerShopIntegrationRoutes, resolveShopOwnerOpenId } from "./shopIntegration";
 
 describe("contrato de catálogo e acompanhamento da loja", () => {
+  it("normaliza o UUID Supabase do proprietário para a identidade usada pelo painel", () => {
+    expect(resolveShopOwnerOpenId("af1ae635-e7b7-4fd0-8839-71d46df9301e")).toBe("supabase:af1ae635-e7b7-4fd0-8839-71d46df9301e");
+    expect(resolveShopOwnerOpenId("supabase:af1ae635-e7b7-4fd0-8839-71d46df9301e")).toBe("supabase:af1ae635-e7b7-4fd0-8839-71d46df9301e");
+  });
+
   process.env.SHOP_ERP_SYNC_SECRET = process.env.SHOP_ERP_SYNC_SECRET || "test-shop-sync-secret";
   const products = [{ id: 8, name: "Camiseta No Corre", category: "Camisas", sku: "NC-TS-001", variations: "P, M, G", price: 79.9, stock: 6, minimumStock: 2, createdAt: "2026-08-13T12:00:00.000Z", updatedAt: "2026-08-13T12:00:00.000Z" }];
   const app = express();
