@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "crypto";
 import type { Express, Request } from "express";
 import { ENV } from "./_core/env";
-import { importShopOrder, listOrders, listProducts } from "./db";
+import { createProduct, importShopOrder, listOrders, listProducts, updateProduct } from "./db";
 import { toShopCatalog } from "../shared/shopCatalogSync";
 import { normalizeShopCheckoutPayload } from "../shared/shopCheckoutCompatibility";
 import type { ShopOrderPayload } from "../shared/shopOrderSync";
@@ -10,6 +10,19 @@ type ShopIntegrationDependencies = {
   importShopOrder: typeof importShopOrder;
   listOrders: typeof listOrders;
   listProducts: typeof listProducts;
+  createProduct: typeof createProduct;
+  updateProduct: typeof updateProduct;
+};
+
+type ShopProductInput = {
+  externalProductId: string;
+  sku: string;
+  name: string;
+  category: string;
+  priceCents: number;
+  stock: number;
+  minimumStock: number;
+  variations: string;
 };
 
 function hasValidShopSecret(request: Request) {
@@ -19,7 +32,24 @@ function hasValidShopSecret(request: Request) {
   return timingSafeEqual(Buffer.from(supplied), Buffer.from(configured));
 }
 
-export function registerShopIntegrationRoutes(app: Express, dependencies: ShopIntegrationDependencies = { importShopOrder, listOrders, listProducts }) {
+export function normalizeShopProductInput(value: unknown): ShopProductInput | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const text = (field: string) => typeof raw[field] === "string" ? raw[field].trim() : "";
+  const integer = (field: string) => typeof raw[field] === "number" && Number.isSafeInteger(raw[field]) && raw[field] >= 0 ? raw[field] : null;
+  const externalProductId = text("externalProductId");
+  const sku = text("sku");
+  const name = text("name");
+  const category = text("category");
+  const priceCents = integer("priceCents");
+  const stock = integer("stock");
+  const minimumStock = integer("minimumStock");
+  const variations = typeof raw.variations === "string" ? raw.variations.trim() : "";
+  if (!externalProductId || !sku || !name || !category || priceCents === null || stock === null || minimumStock === null) return null;
+  return { externalProductId, sku, name, category, priceCents, stock, minimumStock, variations };
+}
+
+export function registerShopIntegrationRoutes(app: Express, dependencies: ShopIntegrationDependencies = { importShopOrder, listOrders, listProducts, createProduct, updateProduct }) {
   app.get("/api/integrations/shop/health", (request, response) => {
     if (!hasValidShopSecret(request)) {
       return response.status(401).json({ ok: false, error: "Não autorizado." });
@@ -42,6 +72,25 @@ export function registerShopIntegrationRoutes(app: Express, dependencies: ShopIn
     } catch (error) {
       console.error("[Shop integration] Unable to read catalog:", error);
       return response.status(500).json({ ok: false, error: "Não foi possível consultar o catálogo do ERP." });
+    }
+  });
+
+  app.post("/api/integrations/shop/products", async (request, response) => {
+    if (!hasValidShopSecret(request)) return response.status(401).json({ ok: false, error: "Não autorizado." });
+    const input = normalizeShopProductInput(request.body);
+    if (!input) return response.status(400).json({ ok: false, error: "Dados de produto inválidos." });
+    try {
+      const ownerOpenId = ENV.ownerOpenId;
+      if (!ownerOpenId) return response.status(500).json({ ok: false, error: "Proprietário ERP não configurado." });
+      const data = { name: input.name, category: input.category, sku: input.sku, variations: input.variations, price: input.priceCents / 100, stock: input.stock, minimumStock: input.minimumStock };
+      const existing = (await dependencies.listProducts(ownerOpenId)).find((product) => product.sku === input.sku);
+      const product = existing
+        ? await dependencies.updateProduct(ownerOpenId, existing.id, data)
+        : await dependencies.createProduct(ownerOpenId, data);
+      return response.status(existing ? 200 : 201).json({ ok: true, erpProductId: product.id, externalProductId: input.externalProductId, sku: product.sku, updatedAt: product.updatedAt });
+    } catch (error) {
+      console.error("[Shop integration] Unable to upsert product:", error);
+      return response.status(500).json({ ok: false, error: "Não foi possível sincronizar o produto." });
     }
   });
 

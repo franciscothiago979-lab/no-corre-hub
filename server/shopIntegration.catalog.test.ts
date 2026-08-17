@@ -4,11 +4,15 @@ import { registerShopIntegrationRoutes } from "./shopIntegration";
 
 describe("contrato de catálogo e acompanhamento da loja", () => {
   process.env.SHOP_ERP_SYNC_SECRET = process.env.SHOP_ERP_SYNC_SECRET || "test-shop-sync-secret";
+  const products = [{ id: 8, name: "Camiseta No Corre", category: "Camisas", sku: "NC-TS-001", variations: "P, M, G", price: 79.9, stock: 6, minimumStock: 2, createdAt: "2026-08-13T12:00:00.000Z", updatedAt: "2026-08-13T12:00:00.000Z" }];
   const app = express();
+  app.use(express.json());
   registerShopIntegrationRoutes(app, {
     importShopOrder: async () => { throw new Error("Não utilizado neste teste"); },
-    listProducts: async () => [{ id: 8, name: "Camiseta No Corre", category: "Camisas", sku: "NC-TS-001", variations: "P, M, G", price: 79.9, stock: 6, minimumStock: 2, createdAt: "2026-08-13T12:00:00.000Z", updatedAt: "2026-08-13T12:00:00.000Z" }],
+    listProducts: async () => products,
     listOrders: async () => [{ id: 22, customerName: "Cliente", itemsDescription: "1× Camiseta", total: 79.9, status: "in_production", source: "no-corre-shop", externalId: "SHOP-22", paymentStatus: "paid", createdAt: "2026-08-13T12:00:00.000Z", updatedAt: "2026-08-13T13:00:00.000Z" }],
+    createProduct: async (_ownerOpenId, data) => ({ id: 9, ...data, createdAt: "2026-08-17T18:00:00.000Z", updatedAt: "2026-08-17T18:00:00.000Z" }),
+    updateProduct: async (_ownerOpenId, id, data) => ({ id, ...data, createdAt: "2026-08-13T12:00:00.000Z", updatedAt: "2026-08-17T18:00:00.000Z" }),
   });
   const server = app.listen(0);
   let baseUrl = "";
@@ -36,5 +40,15 @@ describe("contrato de catálogo e acompanhamento da loja", () => {
   it("não expõe catálogo sem a chave de sincronização", async () => {
     const response = await fetch(`${baseUrl}/api/integrations/shop/catalog`);
     expect(response.status).toBe(401);
+  });
+
+  it("cria produto enviado pela loja com preço, estoque e SKU normalizados", async () => {
+    const response = await fetch(`${baseUrl}/api/integrations/shop/products`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-shop-sync-secret": process.env.SHOP_ERP_SYNC_SECRET! },
+      body: JSON.stringify({ externalProductId: "30001", sku: "001", name: "Camiseta externa", category: "camisas", priceCents: 5000, stock: 5, minimumStock: 2, variations: "" }),
+    });
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({ ok: true, erpProductId: 9, externalProductId: "30001", sku: "001" });
   });
 });
