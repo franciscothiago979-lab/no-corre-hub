@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "crypto";
 import type { Express, Request } from "express";
 import { ENV } from "./_core/env";
-import { createProduct, deleteProduct, importShopOrder, listOrders, listProducts, updateProduct } from "./db";
+import { createProduct, deleteOrder, deleteProduct, importShopOrder, listOrders, listProducts, updateOrderStatus, updateProduct } from "./db";
 import { toShopCatalog } from "../shared/shopCatalogSync";
 import { normalizeShopCheckoutPayload } from "../shared/shopCheckoutCompatibility";
 import type { ShopOrderPayload } from "../shared/shopOrderSync";
@@ -13,6 +13,8 @@ type ShopIntegrationDependencies = {
   createProduct: typeof createProduct;
   updateProduct: typeof updateProduct;
   deleteProduct: typeof deleteProduct;
+  updateOrderStatus: typeof updateOrderStatus;
+  deleteOrder: typeof deleteOrder;
 };
 
 type ShopProductInput = {
@@ -56,7 +58,7 @@ export function normalizeShopProductInput(value: unknown): ShopProductInput | nu
   return { externalProductId, sku, name, category, priceCents, stock, minimumStock, variations };
 }
 
-export function registerShopIntegrationRoutes(app: Express, dependencies: ShopIntegrationDependencies = { importShopOrder, listOrders, listProducts, createProduct, updateProduct, deleteProduct }) {
+export function registerShopIntegrationRoutes(app: Express, dependencies: ShopIntegrationDependencies = { importShopOrder, listOrders, listProducts, createProduct, updateProduct, deleteProduct, updateOrderStatus, deleteOrder }) {
   app.get("/api/integrations/shop/health", (request, response) => {
     if (!hasValidShopSecret(request)) {
       return response.status(401).json({ ok: false, error: "Não autorizado." });
@@ -145,6 +147,41 @@ export function registerShopIntegrationRoutes(app: Express, dependencies: ShopIn
     } catch (error) {
       console.error("[Shop integration] Unable to read order status:", error);
       return response.status(500).json({ ok: false, error: "Não foi possível consultar o pedido no ERP." });
+    }
+  });
+
+  app.patch("/api/integrations/shop/orders/:externalId", async (request, response) => {
+    if (!hasValidShopSecret(request)) return response.status(401).json({ ok: false, error: "Não autorizado." });
+    const externalId = request.params.externalId.trim();
+    const status = typeof request.body?.status === "string" ? request.body.status : "";
+    if (!externalId || !["new", "contacted", "confirmed", "in_production", "ready", "completed", "cancelled"].includes(status)) {
+      return response.status(400).json({ ok: false, error: "Atualização de pedido inválida." });
+    }
+    try {
+      const ownerOpenId = resolveShopOwnerOpenId();
+      const order = (await dependencies.listOrders(ownerOpenId)).find((record) => record.source === "no-corre-shop" && record.externalId === externalId);
+      if (!order) return response.status(404).json({ ok: false, error: "Pedido não encontrado." });
+      const updated = await dependencies.updateOrderStatus(ownerOpenId, order.id, status as typeof order.status);
+      return response.json({ ok: true, order: { externalId, erpOrderId: updated.id, status: updated.status, paymentStatus: updated.paymentStatus ?? "pending", updatedAt: updated.updatedAt } });
+    } catch (error) {
+      console.error("[Shop integration] Unable to update order:", error);
+      return response.status(500).json({ ok: false, error: "Não foi possível atualizar o pedido no ERP." });
+    }
+  });
+
+  app.delete("/api/integrations/shop/orders/:externalId", async (request, response) => {
+    if (!hasValidShopSecret(request)) return response.status(401).json({ ok: false, error: "Não autorizado." });
+    const externalId = request.params.externalId.trim();
+    if (!externalId) return response.status(400).json({ ok: false, error: "Identificador de pedido inválido." });
+    try {
+      const ownerOpenId = resolveShopOwnerOpenId();
+      const order = (await dependencies.listOrders(ownerOpenId)).find((record) => record.source === "no-corre-shop" && record.externalId === externalId);
+      if (!order) return response.json({ ok: true, deleted: false, externalId });
+      await dependencies.deleteOrder(ownerOpenId, order.id);
+      return response.json({ ok: true, deleted: true, externalId });
+    } catch (error) {
+      console.error("[Shop integration] Unable to delete order:", error);
+      return response.status(500).json({ ok: false, error: "Não foi possível excluir o pedido no ERP." });
     }
   });
 

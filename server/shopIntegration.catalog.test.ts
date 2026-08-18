@@ -19,6 +19,8 @@ describe("contrato de catálogo e acompanhamento da loja", () => {
     createProduct: async (_ownerOpenId, data) => ({ id: 9, ...data, createdAt: "2026-08-17T18:00:00.000Z", updatedAt: "2026-08-17T18:00:00.000Z" }),
     updateProduct: async (_ownerOpenId, id, data) => ({ id, ...data, createdAt: "2026-08-13T12:00:00.000Z", updatedAt: "2026-08-17T18:00:00.000Z" }),
     deleteProduct: async () => ({ success: true }),
+    updateOrderStatus: async (_ownerOpenId, id, status) => ({ id, customerName: "Cliente", itemsDescription: "1× Camiseta", total: 79.9, status, source: "no-corre-shop" as const, externalId: "SHOP-22", paymentStatus: "paid", createdAt: "2026-08-13T12:00:00.000Z", updatedAt: "2026-08-17T18:00:00.000Z" }),
+    deleteOrder: async () => ({ success: true }),
   });
   const server = app.listen(0);
   let baseUrl = "";
@@ -65,5 +67,24 @@ describe("contrato de catálogo e acompanhamento da loja", () => {
     });
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({ ok: true, deleted: true, sku: "NC-TS-001" });
+  });
+
+  it("cancela um pedido enviado pela loja antes de a loja devolver o estoque", async () => {
+    const response = await fetch(`${baseUrl}/api/integrations/shop/orders/SHOP-22`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "x-shop-sync-secret": process.env.SHOP_ERP_SYNC_SECRET! },
+      body: JSON.stringify({ status: "cancelled" }),
+    });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ ok: true, order: { externalId: "SHOP-22", status: "cancelled" } });
+  });
+
+  it("aceita a exclusão de um pedido cancelado enviada pela loja", async () => {
+    const response = await fetch(`${baseUrl}/api/integrations/shop/orders/SHOP-22`, {
+      method: "DELETE",
+      headers: { "x-shop-sync-secret": process.env.SHOP_ERP_SYNC_SECRET! },
+    });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ ok: true, deleted: true, externalId: "SHOP-22" });
   });
 });
