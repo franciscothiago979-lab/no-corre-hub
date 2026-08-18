@@ -1,5 +1,6 @@
 import type { Request } from "express";
 import type { User } from "../drizzle/schema";
+import { getUserByOpenId, upsertUser } from "./db";
 
 export async function authenticateIndependentRequest(req: Request): Promise<User | null> {
   const token = req.header("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
@@ -14,14 +15,31 @@ export async function authenticateIndependentRequest(req: Request): Promise<User
 
   const email = remote.email.trim().toLowerCase();
   const ownerEmail = (process.env.OWNER_EMAIL || "").trim().toLowerCase();
+  const openId = `supabase:${remote.id}`;
+  const isOwner = Boolean((ownerEmail && email === ownerEmail) || (process.env.OWNER_OPEN_ID && openId === process.env.OWNER_OPEN_ID));
   const now = new Date();
+  let role: "admin" | "user" = isOwner ? "admin" : "user";
+  try {
+    const existing = await getUserByOpenId(openId);
+    if (!isOwner && existing?.role === "admin") role = "admin";
+    await upsertUser({
+      openId,
+      name: remote.user_metadata?.full_name || remote.user_metadata?.name || email,
+      email,
+      loginMethod: "supabase",
+      role,
+      lastSignedIn: now,
+    });
+  } catch (error) {
+    console.warn("[Auth] Unable to persist Supabase access profile:", error);
+  }
   return {
     id: 0,
-    openId: `supabase:${remote.id}`,
+    openId,
     name: remote.user_metadata?.full_name || remote.user_metadata?.name || email,
     email,
     loginMethod: "supabase",
-    role: ownerEmail && email === ownerEmail ? "admin" : "user",
+    role,
     createdAt: now,
     updatedAt: now,
     lastSignedIn: now,
