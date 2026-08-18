@@ -9,6 +9,7 @@ const auth = vi.hoisted(() => ({
 }));
 
 vi.mock("@/_core/hooks/useAuth", () => ({ useAuth: () => auth.current }));
+vi.mock("@/hooks/useErpBranding", () => ({ useErpBranding: () => ({ heroTitle: "Operação em foco", heroDescription: "No Corre Central · clareza para produzir melhor.", heroImageUrl: "", logoUrl: "https://placehold.co/320x80/111111/FFFFFF?text=NO+CORRE+CENTRAL" }) }));
 
 import { App } from "../client/src/App";
 

@@ -1,3 +1,4 @@
+import React from "react";
 import { useErpBranding } from "@/hooks/useErpBranding";
 
 export function ErpHero({ path }: { path: string }) {
