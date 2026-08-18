@@ -1,4 +1,5 @@
 import { startLogin } from "@/const";
+import { clearIndependentSession } from "@/lib/independent-session";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
@@ -39,10 +40,10 @@ export function useAuth(options?: UseAuthOptions) {
       }
       throw error;
     } finally {
-      // Clear the local auth cache. The backend session is cleared by the
-      // logout mutation.
+      // Clear both the Supabase session and local caches so a different
+      // administrator can sign in on the same browser.
       try {
-        sessionStorage.removeItem("no-corre-auth-session");
+        await clearIndependentSession();
       } catch {}
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
