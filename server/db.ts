@@ -300,6 +300,37 @@ export async function importShopOrder(ownerOpenId: string, payload: ShopOrderPay
     paymentStatus: payload.paymentStatus ?? "pending",
     productionNotes: payload.notes?.trim() || null,
   });
+  const requestedBySku = new Map<string, Array<{ quantity: number; variantId?: string | null }>>();
+  for (const item of payload.items) {
+    const sku = item.sku?.trim();
+    if (!sku) continue;
+    requestedBySku.set(sku, [...(requestedBySku.get(sku) ?? []), { quantity: item.quantity, variantId: item.variantId }]);
+  }
+  if (requestedBySku.size) {
+    const products = await listProducts(ownerOpenId);
+    for (const [sku, requested] of Array.from(requestedBySku.entries())) {
+      const product = products.find(candidate => candidate.sku === sku);
+      if (!product) continue;
+      const quantity = requested.reduce((total, item) => total + item.quantity, 0);
+      let variations = product.variations ?? "";
+      try {
+        const parsed = JSON.parse(variations);
+        if (Array.isArray(parsed)) {
+          const remainingByVariant = new Map<string, number>();
+          for (const item of requested) if (item.variantId) remainingByVariant.set(item.variantId, (remainingByVariant.get(item.variantId) ?? 0) + item.quantity);
+          variations = JSON.stringify(parsed.map((variant) => {
+            if (!variant || typeof variant !== "object") return variant;
+            const value = variant as Record<string, unknown>;
+            const id = typeof value.id === "string" ? value.id : "";
+            const sold = remainingByVariant.get(id) ?? 0;
+            const current = Number(value.stock);
+            return sold && Number.isFinite(current) ? { ...value, stock: Math.max(0, Math.trunc(current) - sold) } : value;
+          }));
+        }
+      } catch { /* Variações legadas continuam utilizáveis; o estoque total permanece correto. */ }
+      await updateProduct(ownerOpenId, product.id, { name: product.name, category: product.category, sku: product.sku, variations, price: product.price, stock: Math.max(0, product.stock - quantity), minimumStock: product.minimumStock });
+    }
+  }
   return { order: created, duplicate: false };
 }
 

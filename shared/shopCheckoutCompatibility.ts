@@ -31,7 +31,7 @@ function normalizeCanonicalOrder(input: UnknownRecord): ShopOrderPayload | null 
     const quantity = asPositiveInteger(row.quantity);
     const unitPriceCents = asNonNegativeInteger(row.unitPriceCents);
     if (!name || quantity === null || unitPriceCents === null) return null;
-    return { name, variant: asNonEmptyString(row.variant), quantity, unitPriceCents };
+    return { sku: asNonEmptyString(row.sku), variantId: asNonEmptyString(row.variantId), name, variant: asNonEmptyString(row.variant), quantity, unitPriceCents };
   });
   if (items.some((item) => !item)) return null;
 
@@ -83,7 +83,7 @@ export function normalizeShopCheckoutPayload(input: unknown): ShopOrderPayload |
     const unitPriceCents = asNonNegativeInteger(row.unitPriceCents);
     if (!name || quantity === null || unitPriceCents === null) return null;
     const variant = [color, size].filter(Boolean).join(" · ") || null;
-    return { name, variant, quantity, unitPriceCents };
+    return { sku: asNonEmptyString(row.sku), variantId: asNonEmptyString(row.variantId), name, variant, quantity, unitPriceCents };
   });
   if (items.some((item) => !item)) return null;
 

@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "crypto";
 import type { Express, Request } from "express";
 import { ENV } from "./_core/env";
-import { createProduct, importShopOrder, listOrders, listProducts, updateProduct } from "./db";
+import { createProduct, deleteProduct, importShopOrder, listOrders, listProducts, updateProduct } from "./db";
 import { toShopCatalog } from "../shared/shopCatalogSync";
 import { normalizeShopCheckoutPayload } from "../shared/shopCheckoutCompatibility";
 import type { ShopOrderPayload } from "../shared/shopOrderSync";
@@ -12,6 +12,7 @@ type ShopIntegrationDependencies = {
   listProducts: typeof listProducts;
   createProduct: typeof createProduct;
   updateProduct: typeof updateProduct;
+  deleteProduct: typeof deleteProduct;
 };
 
 type ShopProductInput = {
@@ -55,7 +56,7 @@ export function normalizeShopProductInput(value: unknown): ShopProductInput | nu
   return { externalProductId, sku, name, category, priceCents, stock, minimumStock, variations };
 }
 
-export function registerShopIntegrationRoutes(app: Express, dependencies: ShopIntegrationDependencies = { importShopOrder, listOrders, listProducts, createProduct, updateProduct }) {
+export function registerShopIntegrationRoutes(app: Express, dependencies: ShopIntegrationDependencies = { importShopOrder, listOrders, listProducts, createProduct, updateProduct, deleteProduct }) {
   app.get("/api/integrations/shop/health", (request, response) => {
     if (!hasValidShopSecret(request)) {
       return response.status(401).json({ ok: false, error: "Não autorizado." });
@@ -97,6 +98,22 @@ export function registerShopIntegrationRoutes(app: Express, dependencies: ShopIn
     } catch (error) {
       console.error("[Shop integration] Unable to upsert product:", error);
       return response.status(500).json({ ok: false, error: "Não foi possível sincronizar o produto." });
+    }
+  });
+
+  app.delete("/api/integrations/shop/products/:sku", async (request, response) => {
+    if (!hasValidShopSecret(request)) return response.status(401).json({ ok: false, error: "Não autorizado." });
+    const sku = request.params.sku.trim();
+    if (!sku) return response.status(400).json({ ok: false, error: "SKU inválido." });
+    try {
+      const ownerOpenId = resolveShopOwnerOpenId();
+      const product = (await dependencies.listProducts(ownerOpenId)).find((candidate) => candidate.sku === sku);
+      if (!product) return response.json({ ok: true, deleted: false, sku });
+      await dependencies.deleteProduct(ownerOpenId, product.id);
+      return response.json({ ok: true, deleted: true, sku });
+    } catch (error) {
+      console.error("[Shop integration] Unable to delete product:", error);
+      return response.status(500).json({ ok: false, error: "Não foi possível remover o produto no ERP." });
     }
   });
 

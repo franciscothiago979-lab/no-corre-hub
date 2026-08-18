@@ -1,4 +1,6 @@
 export type ShopOrderItem = {
+  sku?: string | null;
+  variantId?: string | null;
   name: string;
   variant?: string | null;
   quantity: number;

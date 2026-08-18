@@ -68,6 +68,23 @@ async function publishProductToShop(ownerOpenId: string, product: Awaited<Return
   }
 }
 
+async function publishProductDeletionToShop(ownerOpenId: string, product: Awaited<ReturnType<typeof createProduct>>) {
+  const occurredAt = new Date().toISOString();
+  try {
+    await publishImmediateShopEvent(ownerOpenId, {
+      eventId: syncEventId("product-delete", `sku:${product.sku}`, occurredAt),
+      entity: "product",
+      operation: "delete",
+      source: "erp",
+      externalId: `sku:${product.sku}`,
+      occurredAt,
+      payload: { sku: product.sku, erpProductId: product.id },
+    });
+  } catch (error) {
+    console.error("[Shop sync] Unable to persist product deletion event", error);
+  }
+}
+
 async function publishContactToShop(ownerOpenId: string, customer: Awaited<ReturnType<typeof createCustomer>>) {
   const externalId = `erp-customer:${customer.id}`;
   try {
@@ -135,7 +152,13 @@ export const appRouter = router({
       await publishProductToShop(ctx.user.openId, product);
       return product;
     }),
-    remove: adminProcedure.input(z.object({ id: z.number().int() })).mutation(({ ctx, input }) => deleteProduct(ctx.user.openId, input.id)),
+    remove: adminProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+      const product = (await listProducts(ctx.user.openId)).find(candidate => candidate.id === input.id);
+      if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "O produto que você tentou excluir não foi encontrado." });
+      const result = await deleteProduct(ctx.user.openId, input.id);
+      await publishProductDeletionToShop(ctx.user.openId, product);
+      return result;
+    }),
   }),
   orders: router({
     list: adminProcedure.query(({ ctx }) => listOrders(getOperationalOwnerOpenId(ctx.user.openId))),

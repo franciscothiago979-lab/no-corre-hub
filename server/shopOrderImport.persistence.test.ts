@@ -59,4 +59,33 @@ describe("persistência do pedido recebido da No Corre Shop", () => {
       data: expect.objectContaining({ externalId: "NC-ERP-PERSIST-001", source: "no-corre-shop" }),
     });
   });
+
+  it("baixa o produto e a variante correspondente quando a venda da loja informa SKU", async () => {
+    const product = { name: "Camiseta No Corre", category: "Camisas", sku: "NC-TS-001", variations: JSON.stringify([{ id: "preta-g", stock: 5 }, { id: "branca-m", stock: 2 }]), price: 45.99, stock: 7, minimumStock: 2, createdAt: "2026-08-18T12:00:00.000Z", updatedAt: "2026-08-18T12:00:00.000Z" };
+    fetchMock
+      .mockResolvedValueOnce(json([])) // pedidos existentes
+      .mockResolvedValueOnce(json([])) // contatos existentes
+      .mockResolvedValueOnce(json([])) // próximo id do contato
+      .mockResolvedValueOnce(json([{ record_id: 1 }], 201)) // contato criado
+      .mockResolvedValueOnce(json([])) // próximo id do pedido
+      .mockResolvedValueOnce(json([{ record_id: 1 }], 201)) // pedido criado
+      .mockResolvedValueOnce(json([{ record_id: 8, data: product, created_at: product.createdAt, updated_at: product.updatedAt }])) // produto ERP encontrado pelo SKU
+      .mockResolvedValueOnce(json([{ record_id: 8, data: product, created_at: product.createdAt, updated_at: product.updatedAt }])) // produto relido antes da atualização
+      .mockResolvedValueOnce(json([{ record_id: 8, data: { ...product, stock: 5, variations: JSON.stringify([{ id: "preta-g", stock: 3 }, { id: "branca-m", stock: 2 }]), updatedAt: "2026-08-18T13:00:00.000Z" }, created_at: product.createdAt, updated_at: "2026-08-18T13:00:00.000Z" }])); // produto atualizado
+
+    await importShopOrder("owner-test", {
+      externalId: "NC-ERP-STOCK-001",
+      customer: { name: "Contato da loja", phone: "11999990000" },
+      items: [{ sku: "NC-TS-001", variantId: "preta-g", name: "Camiseta No Corre", variant: "Preto · G", quantity: 2, unitPriceCents: 4599 }],
+      totalCents: 9198,
+      paymentStatus: "pending",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(9);
+    const productUpdate = fetchMock.mock.calls[8];
+    expect(productUpdate?.[1]).toMatchObject({ method: "PATCH" });
+    const updatedData = JSON.parse(String(productUpdate?.[1]?.body)).data;
+    expect(updatedData.stock).toBe(5);
+    expect(JSON.parse(updatedData.variations)).toEqual([{ id: "preta-g", stock: 3 }, { id: "branca-m", stock: 2 }]);
+  });
 });

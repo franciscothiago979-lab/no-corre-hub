@@ -10,6 +10,9 @@ describe("compatibilidade do checkout publicado da loja", () => {
     importShopOrder: imported,
     listOrders: vi.fn(),
     listProducts: vi.fn(),
+    createProduct: vi.fn(),
+    updateProduct: vi.fn(),
+    deleteProduct: vi.fn(),
   });
   const server = app.listen(0);
   let baseUrl = "";
@@ -34,7 +37,7 @@ describe("compatibilidade do checkout publicado da loja", () => {
         externalOrderId: "NC-COMPAT-001",
         source: "no-corre-storefront",
         customer: { name: "Cliente de teste", phone: "11999999999", notes: "TESTE ERP" },
-        items: [{ productId: 10, name: "Camisa preta", colorName: "Preto", colorHex: "#000000", size: "G", quantity: 1, unitPriceCents: 4599 }],
+        items: [{ productId: 10, sku: "NC-TS-001", variantId: "preta-g", name: "Camisa preta", colorName: "Preto", colorHex: "#000000", size: "G", quantity: 1, unitPriceCents: 4599 }],
         totals: { subtotalCents: 4599, discountCents: 0, shippingCents: 0, totalCents: 4599 },
         orderSummary: "1 camisa preta G",
       }),
@@ -48,7 +51,7 @@ describe("compatibilidade do checkout publicado da loja", () => {
       shippingCents: 0,
       discountCents: 0,
       paymentStatus: "pending",
-      items: [{ name: "Camisa preta", variant: "Preto · G", quantity: 1, unitPriceCents: 4599 }],
+      items: [{ sku: "NC-TS-001", variantId: "preta-g", name: "Camisa preta", variant: "Preto · G", quantity: 1, unitPriceCents: 4599 }],
     }));
   });
 });
