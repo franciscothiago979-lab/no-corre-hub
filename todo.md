@@ -688,3 +688,4 @@
 - [x] Garantir que cada pedido válido da loja grave o mesmo formato persistente exibido no ERP e devolva o identificador criado.
 - [x] Cobrir a persistência e a consulta de pedidos integrados com testes automatizados.
 - [ ] Validar em ambiente controlado que um pedido integrado aparece na tela Pedidos sem manter dados de teste.
+- [x] Permitir enviar do computador as imagens do hero e do logotipo diretamente na área de aparência do ERP, com prévia e salvamento no Supabase Storage.

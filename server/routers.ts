@@ -21,6 +21,7 @@ const workspaceModule = z.enum(["orders", "suppliers", "quotes", "production", "
 const orderStatus = z.enum(["awaiting_payment", "in_production", "ready", "completed", "cancelled"]);
 const assetMimeType = z.enum(["image/png", "image/jpeg", "image/webp"]);
 const assetImportInput = z.object({ originalName: z.string().trim().min(1).max(180), mimeType: assetMimeType, dataUrl: z.string().min(32).max(11_500_000) });
+const brandingImageInput = z.object({ originalName: z.string().trim().min(1).max(180), mimeType: assetMimeType, dataUrl: z.string().min(32).max(11_500_000), target: z.enum(["hero", "logo"]) });
 const assetReviewInput = z.object({ id: z.number().int().positive(), name: z.string().trim().min(2).max(100), model: z.string().trim().min(2).max(80), theme: z.string().trim().min(2).max(100) });
 
 /**
@@ -191,6 +192,14 @@ export const appRouter = router({
     }),
     save: adminProcedure.input(z.object({ module: workspaceModule, data: z.string().min(2).max(60000) })).mutation(async ({ ctx, input }) => {
       return saveWorkspaceSnapshot(ctx.user.openId, input.module, input.data);
+    }),
+  }),
+  branding: router({
+    uploadImage: adminProcedure.input(brandingImageInput).mutation(async ({ ctx, input }) => {
+      const buffer = parseAssetDataUrl(input.dataUrl, input.mimeType);
+      const safeName = input.originalName.replace(/[^a-z0-9._-]+/gi, "-").replace(/^-+|-+$/g, "") || `${input.target}.png`;
+      const stored = await storagePut(`branding/${ctx.user.openId}/${input.target}/${safeName}`, buffer, input.mimeType);
+      return { url: stored.url, key: stored.key, target: input.target };
     }),
   }),
   ai: router({
