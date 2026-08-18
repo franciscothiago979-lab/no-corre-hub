@@ -6,6 +6,7 @@ describe("aprovação administrativa", () => {
     expect(canAccessErp("admin")).toBe(true);
     expect(canAccessErp("user")).toBe(false);
     expect(canAccessErp(null)).toBe(false);
+    expect(canAccessErp("user", true)).toBe(true);
   });
 
   it("permite que somente o proprietário aprove ou revogue outro usuário", () => {
@@ -18,6 +19,7 @@ describe("aprovação administrativa", () => {
     for (const path of erpAdministrativePaths) {
       expect(getErpRouteAccess(path, true, "user")).toBe("pending");
       expect(getErpRouteAccess(path, true, "admin")).toBe("allowed");
+      expect(getErpRouteAccess(path, true, "user", true)).toBe("allowed");
     }
   });
 

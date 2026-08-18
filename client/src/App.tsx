@@ -597,7 +597,7 @@ export function App({ renderContent }: AppProps) {
   const defaultContent = page === "dashboard" ? <Dashboard /> : page === "clientes" ? <Customers /> : page === "produtos" ? <ProductsPersistent /> : page === "pedidos" ? <OrdersPersistent /> : page === "fornecedores" ? <Suppliers /> : page === "precificacao" ? <Pricing /> : page === "orcamentos" ? <Quotes /> : page === "producao" ? <ProductionPersistent /> : page === "camisas" ? <ShirtProduction /> : page === "dtf" ? <Dtf /> : page === "sublimacao" ? <SublimationPersistent /> : page === "estoque" ? <InventoryPersistent /> : page === "financeiro" ? <FinancePersistent /> : page === "relatorios" ? <ReportsPersistent /> : page === "ia" ? <AiStudio /> : page === "biblioteca" ? <Library /> : page === "marketing" ? <MarketingWorkspace /> : page === "configuracoes" ? <SettingsPage /> : <Dashboard />;
   const content = renderContent ? renderContent(page) : defaultContent;
   if (loading) return <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-semibold text-slate-500">Verificando acesso…</div>;
-  return <AccessGate path={path} isAuthenticated={isAuthenticated} role={user?.role} onLogout={() => logout()}><AppShell currentPath={path} onNavigate={navigate}>{content}<MobileQuickActions currentPath={path} onNavigate={navigate} /></AppShell></AccessGate>;
+  return <AccessGate path={path} isAuthenticated={isAuthenticated} role={user?.role} isOwner={Boolean(user?.isOwner)} onLogout={() => logout()}><AppShell currentPath={path} onNavigate={navigate}>{content}<MobileQuickActions currentPath={path} onNavigate={navigate} /></AppShell></AccessGate>;
 }
 
 export default App;

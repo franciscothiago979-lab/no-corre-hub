@@ -8,14 +8,14 @@ export const erpAdministrativePaths = [
 
 export type ErpRouteAccess = "allowed" | "pending";
 
-export function getErpRouteAccess(path: string, isAuthenticated: boolean, role?: AccessRole | null): ErpRouteAccess {
+export function getErpRouteAccess(path: string, isAuthenticated: boolean, role?: AccessRole | null, isOwner = false): ErpRouteAccess {
   const normalizedPath = path === "/" ? "/dashboard" : path;
   const isAdministrativeRoute = erpAdministrativePaths.includes(normalizedPath as (typeof erpAdministrativePaths)[number]);
-  return isAdministrativeRoute && isAuthenticated && !canAccessErp(role) ? "pending" : "allowed";
+  return isAdministrativeRoute && isAuthenticated && !canAccessErp(role, isOwner) ? "pending" : "allowed";
 }
 
-export function canAccessErp(role?: AccessRole | null) {
-  return role === "admin";
+export function canAccessErp(role?: AccessRole | null, isOwner = false) {
+  return isOwner || role === "admin";
 }
 
 export function canChangeAdministratorRole(actorOpenId: string, ownerOpenId: string, targetOpenId: string, nextRole: AccessRole) {
