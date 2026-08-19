@@ -9,6 +9,12 @@ import { startLogin } from "./const";
 import { supabase } from "./lib/supabase";
 import "./index.css";
 
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => { /* O ERP continua funcional mesmo se o cache offline não puder ser ativado. */ });
+  });
+}
+
 const queryClient = new QueryClient();
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-labelledby="title">
+  <title id="title">No Corre Central</title>
+  <rect width="192" height="192" rx="42" fill="#0a0b0d"/>
+  <path d="M42 54h108v84H42z" fill="none" stroke="#f97316" stroke-width="7"/>
+  <path d="M60 113V78h12l12 18 12-18h12v35h-12V96l-12 17-12-17v17zm58 0V78h16c14 0 23 6 23 17s-9 18-23 18zm12-10h4c7 0 11-3 11-8s-4-7-11-7h-4z" fill="#fff"/>
+  <circle cx="150" cy="50" r="11" fill="#e5ff83"/>
+</svg>

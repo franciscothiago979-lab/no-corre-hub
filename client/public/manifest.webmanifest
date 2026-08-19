@@ -1,0 +1,14 @@
+{
+  "name": "No Corre Central",
+  "short_name": "No Corre ERP",
+  "description": "Gestão móvel de pedidos, produção, estoque e finanças da NO CORRE.",
+  "lang": "pt-BR",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0b0d",
+  "theme_color": "#f97316",
+  "icons": [
+    { "src": "/no-corre-central-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
