@@ -171,6 +171,20 @@ export const appRouter = router({
       await publishOrderStatusToShop(ownerOpenId, order);
       return order;
     }),
+    prepareWhatsappStatus: adminProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+      const ownerOpenId = getOperationalOwnerOpenId(ctx.user.openId);
+      const order = (await listOrders(ownerOpenId)).find(candidate => candidate.id === input.id);
+      if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "Pedido não encontrado." });
+      const customer = order.customerId ? (await listCustomers(ownerOpenId)).find(candidate => candidate.id === order.customerId) : undefined;
+      const phone = customer?.phone?.replace(/\D/g, "") ?? "";
+      if (phone.length < 10) throw new TRPCError({ code: "BAD_REQUEST", message: "Este pedido não possui telefone de WhatsApp cadastrado." });
+      const labels: Record<typeof order.status, string> = { awaiting_payment: "aguardando confirmação de pagamento", in_production: "em produção", ready: "pronto para envio ou retirada", completed: "concluído", cancelled: "cancelado" };
+      const identifier = order.externalId ? ` ${order.externalId}` : ` #${order.id}`;
+      const message = `Olá, ${order.customerName}! Seu pedido${identifier} está ${labels[order.status]}. Qualquer dúvida, fale com a equipe NO CORRE SPORT&STREETWEAR.`;
+      const log = `WhatsApp preparado em ${new Date().toLocaleString("pt-BR")}: ${labels[order.status]}.`;
+      await updateOrder(ownerOpenId, order.id, { ...order, productionNotes: [order.productionNotes, log].filter(Boolean).join("\n") });
+      return { url: `https://wa.me/${phone}?text=${encodeURIComponent(message)}`, message };
+    }),
     remove: adminProcedure.input(z.object({ id: z.number().int() })).mutation(({ ctx, input }) => deleteOrder(getOperationalOwnerOpenId(ctx.user.openId), input.id)),
   }),
   stock: router({
